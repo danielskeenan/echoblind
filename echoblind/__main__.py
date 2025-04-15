@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 from xml import sax
 from xml.sax.saxutils import XMLFilterBase, XMLGenerator
+from xml.sax.xmlreader import AttributesImpl
 
 import pyexcel
 from bidict import bidict
@@ -15,8 +16,8 @@ from bidict import bidict
 @dataclass
 class Circuit:
     num: int
-    space_num: int
-    zone_num: int
+    space_num: Optional[int]
+    zone_num: Optional[int]
 
 
 @dataclass
@@ -32,6 +33,15 @@ class Preset:
             self.fade_time = {k: v for k, v in zip(range(1, 17), repeat(0, 16))}
         if self.levels is None:
             self.levels = {k: v for k, v in zip(range(1, 49), repeat(0, 48))}
+
+
+def optional_int(val: Optional) -> Optional[int]:
+    if isinstance(val, str) and len(val) == 0:
+        return None
+    try:
+        return int(val)
+    except ValueError:
+        return None
 
 
 class EchoRackConfigReader(sax.ContentHandler):
@@ -135,8 +145,10 @@ class CfgMerger(XMLFilterBase):
         circuit = self.circuits.get(int(attrs['NUMBER']))
         if circuit is None:
             return
-        attrs['SPACE'] = str(circuit.space_num)
-        attrs['ZONE'] = str(circuit.zone_num)
+        if circuit.space_num is not None:
+            attrs['SPACE'] = str(circuit.space_num)
+        if circuit.zone_num is not None:
+            attrs['ZONE'] = str(circuit.zone_num)
 
     def _process_space(self, attrs):
         if 'SPACEINRACK' in attrs:
@@ -155,8 +167,8 @@ class CfgMerger(XMLFilterBase):
             ext = ''
             non_ext = 'EXT'
         new_attrs = {
-            'SPACEINRACK': rack_space_num,
-            'NUMBER': echo_space_num,
+            'SPACEINRACK': str(rack_space_num),
+            'NUMBER': str(echo_space_num),
             'NAME': ''
         }
         for k, v in new_attrs.items():
@@ -173,7 +185,7 @@ class CfgMerger(XMLFilterBase):
         rack_space_num = int(attrs['SPACEINRACK'])
         uptime = self._current_preset.fade_time.get(rack_space_num)
         if uptime is not None:
-            attrs['UPTIME'] = uptime
+            attrs['UPTIME'] = str(uptime)
 
     def _process_prelevel(self, attrs):
         if self._current_preset is None:
@@ -181,7 +193,7 @@ class CfgMerger(XMLFilterBase):
         relay_num = int(attrs['RELAY'])
         level = self._current_preset.levels.get(relay_num)
         if level is not None:
-            attrs['LEVEL'] = level
+            attrs['LEVEL'] = str(level)
 
     _element_processors = {
         'RELAY': _process_relay,
@@ -192,9 +204,10 @@ class CfgMerger(XMLFilterBase):
     }
 
     def startElement(self, name, attrs):
+        attrs = dict(attrs)
         if name in self._element_processors:
-            self._element_processors[name](self, dict(attrs))
-        super().startElement(name, attrs)
+            self._element_processors[name](self, attrs)
+        super().startElement(name, AttributesImpl(attrs))
 
 
 def config_to_ods(cfg_path: Path, ods_path: Path):
@@ -259,22 +272,21 @@ def ods_to_config(cfg_path: Path, ods_path: Path):
     levels_sheet.name_columns_by_row(0)
     levels_content = levels_sheet.to_records()
     for row in levels_content:
+        circuit_num = optional_int(row['Circuit'])
+        if circuit_num is None:
+            continue
+        space_num = optional_int(row['Space'])
+        zone_num = optional_int(row['Zone'])
         circuit = Circuit(
-            num=int(row['Circuit']),
-            space_num=int(row['Space']),
-            zone_num=int(row['Zone'])
+            num=circuit_num,
+            space_num=space_num,
+            zone_num=zone_num
         )
         circuits[circuit.num] = circuit
         for col, val in row.items():
             if match := (re.match(re_preset, col)):
                 preset_num = int(match.group(1))
-                if isinstance(val, str) and len(val) == 0:
-                    level = None
-                else:
-                    try:
-                        level = int(val)
-                    except ValueError:
-                        level = None
+                level = optional_int(val)
                 if preset_num not in presets:
                     presets[preset_num] = Preset(num=preset_num)
                 presets[preset_num].levels[circuit.num] = level
@@ -284,17 +296,13 @@ def ods_to_config(cfg_path: Path, ods_path: Path):
     times_sheet.name_columns_by_row(0)
     times_content = times_sheet.to_records()
     for row in times_content:
-        space_num = int(row['Space'])
+        space_num = optional_int(row['Space'])
+        if space_num is None:
+            continue
         for col, val in row.items():
             if match := (re.match(re_preset, col)):
                 preset_num = int(match.group(1))
-                if isinstance(val, str) and len(val) == 0:
-                    uptime = None
-                else:
-                    try:
-                        uptime = int(val)
-                    except ValueError:
-                        uptime = None
+                uptime = optional_int(val)
                 if preset_num not in presets:
                     presets[preset_num] = Preset(num=preset_num)
                 # Preset fade times are indexed by rack space, not Echo space.
