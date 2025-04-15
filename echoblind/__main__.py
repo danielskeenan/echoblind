@@ -258,7 +258,7 @@ def config_to_ods(cfg_path: Path, ods_path: Path):
     book.save_as(ods_path)
 
 
-def ods_to_config(cfg_path: Path, ods_path: Path):
+def ods_to_config(cfg_path: Path, ods_path: Path, out_path: Path):
     cfg = parse_cfg(cfg_path)
     circuits = cfg['circuits']
     rack_spaces = cfg['rack_spaces']
@@ -310,25 +310,30 @@ def ods_to_config(cfg_path: Path, ods_path: Path):
 
     # Write config.
     reader = CfgMerger(circuits, rack_spaces, presets, sax.make_parser())
-    # TODO: Make the output path configurable
-    with cfg_path.with_stem(f'{cfg_path.stem}-updated').open('w') as out_file:
+    with out_path.open('w') as out_file:
         parser_handler = XMLGenerator(out_file, encoding='utf-8', short_empty_elements=True)
         reader.setContentHandler(parser_handler)
         reader.parse(cfg_path)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Edit ETC Echo panel presets as a spreadsheet')
-    parser.add_argument('command', choices=(
-        'import', 'export'), help='Import a panel config to ODS, or Export a ODS into a panel config')
-    parser.add_argument('--cfg', type=lambda xml_path: Path(xml_path), required=True, help='Path to panel config XML')
-    parser.add_argument('--ods', type=lambda out_path: Path(out_path), required=True, help='Path to exported ODS')
+    parser = argparse.ArgumentParser(description='Edit ETC Echo panel presets as a spreadsheet.')
+    subparsers = parser.add_subparsers(title='subcommands')
+    to_ods_parser = subparsers.add_parser('to_ods', help='Convert a panel config to ODS.')
+    to_ods_parser.set_defaults(command='to_ods')
+    to_ods_parser.add_argument('cfg', type=lambda p:Path(p), help='Path to saved panel config.')
+    to_ods_parser.add_argument('ods', type=lambda p:Path(p), help='Path to generated ODS file.')
+    to_cfg_parser = subparsers.add_parser('to_cfg', help='Convert an ODS file to a panel config.')
+    to_cfg_parser.set_defaults(command='to_cfg')
+    to_cfg_parser.add_argument('cfg', type=lambda p: Path(p), help='Path to original panel config.')
+    to_cfg_parser.add_argument('ods', type=lambda p: Path(p), help='Path to generated ODS file.')
+    to_cfg_parser.add_argument('out', type=lambda p: Path(p), help='Path to new panel config.')
     args = parser.parse_args()
 
-    if args.command == 'import':
+    if args.command == 'to_ods':
         config_to_ods(args.cfg, args.ods)
-    elif args.command == 'export':
-        ods_to_config(args.cfg, args.ods)
+    elif args.command == 'to_cfg':
+        ods_to_config(args.cfg, args.ods, args.out)
 
 
 if __name__ == '__main__':
