@@ -10,7 +10,8 @@ requires-python = ">=3.13"
 dependencies = [
     "pyexcel (>=0.7.3,<0.8.0)",
     "pyexcel-ods (>=0.6.0,<0.7.0)",
-    "bidict (>=0.23.1,<0.24.0)"
+    "bidict (>=0.23.1,<0.24.0)",
+    "packaging (>=25.0,<26.0)"
 ]
 
 

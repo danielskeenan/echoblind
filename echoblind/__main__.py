@@ -1,113 +1,18 @@
 import argparse
-import dataclasses
 import re
-from dataclasses import dataclass
-from itertools import repeat
 from pathlib import Path
-from typing import Optional
 from xml import sax
-from xml.sax.saxutils import XMLFilterBase, XMLGenerator
-from xml.sax.xmlreader import AttributesImpl
+from xml.sax.saxutils import XMLGenerator
 
 import pyexcel
 from bidict import bidict
 
+from echoblind.echotypes import Circuit, optional_int, Preset
+from echoblind.rack.epcp import EchoPCPDetector
 
-@dataclass
-class Circuit:
-    num: int
-    space_num: Optional[int]
-    zone_num: Optional[int]
-
-
-@dataclass
-class Preset:
-    num: int
-    """Map rack space nums to fade times in seconds"""
-    fade_time: dict[int, int] = dataclasses.field(default=None)
-    """Map rack circuit nums to levels 0-255"""
-    levels: dict[int, int] = dataclasses.field(default=None)
-
-    def __post_init__(self):
-        if self.fade_time is None:
-            self.fade_time = {k: v for k, v in zip(range(1, 17), repeat(0, 16))}
-        if self.levels is None:
-            self.levels = {k: v for k, v in zip(range(1, 49), repeat(0, 48))}
-
-
-def optional_int(val: Optional) -> Optional[int]:
-    if isinstance(val, str) and len(val) == 0:
-        return None
-    try:
-        return int(val)
-    except ValueError:
-        return None
-
-
-class EchoRackConfigReader(sax.ContentHandler):
-    circuits: dict[int, Circuit]
-    rack_spaces: bidict[int, int]
-    presets: dict[int, Preset]
-    _current_preset: Optional[Preset] = None
-
-    def __init__(self, circuits: dict[int, Circuit], rack_spaces: bidict[int, int], presets: dict[int, Preset]):
-        super().__init__()
-        self.circuits = circuits
-        self.rack_spaces = rack_spaces
-        self.presets = presets
-
-    def _store_current_preset(self):
-        if self._current_preset is not None:
-            self.presets[self._current_preset.num] = self._current_preset
-            self._current_preset = None
-
-    def _process_relay(self, attrs):
-        circuit = Circuit(
-            num=int(attrs['NUMBER']),
-            space_num=int(attrs['SPACE']),
-            zone_num=int(attrs['ZONE'])
-        )
-        self.circuits[circuit.num] = circuit
-
-    def _process_space(self, attrs):
-        if 'SPACEINRACK' in attrs:
-            echo_num = int(attrs['NUMBER'])
-            if echo_num <= 0:
-                return
-            self.rack_spaces[int(attrs['SPACEINRACK'])] = echo_num
-        elif 'SPACEINRACKEXT' in attrs:
-            echo_num = int(attrs['NUMBEREXT'])
-            if echo_num <= 0:
-                return
-            self.rack_spaces[int(attrs['SPACEINRACKEXT'])] = echo_num
-
-    def _process_preset(self, attrs):
-        self._store_current_preset()
-        self._current_preset = Preset(num=int(attrs['NUMBER']))
-
-    def _process_prefadelevel(self, attrs):
-        self._current_preset.fade_time[int(attrs['SPACEINRACK'])] = int(attrs['UPTIME'])
-
-    def _process_prelevel(self, attrs):
-        self._current_preset.levels[int(attrs['RELAY'])] = int(attrs['LEVEL'])
-
-    _element_processors = {
-        'RELAY': _process_relay,
-        'SPACE': _process_space,
-        'PRESET': _process_preset,
-        'PREFADELEVEL': _process_prefadelevel,
-        'PRELEVEL': _process_prelevel,
-    }
-
-    def startElement(self, name, attrs):
-        if name in self._element_processors:
-            self._element_processors[name](self, attrs)
-        else:
-            super().startElement(name, attrs)
-
-    def endDocument(self):
-        self._store_current_preset()
-        super().endDocument()
+DETECTOR_CLASSES = [
+    EchoPCPDetector,
+]
 
 
 def parse_cfg(cfg_path: Path):
@@ -116,9 +21,14 @@ def parse_cfg(cfg_path: Path):
     presets: dict[int, Preset] = {}
 
     # Get data from config file.
-    parser = sax.make_parser()
-    parser_handler = EchoRackConfigReader(circuits, rack_spaces, presets)
-    parser.setContentHandler(parser_handler)
+    parser = None
+    for detector_class in DETECTOR_CLASSES:
+        detector = detector_class(cfg_path)
+        if detector.is_valid():
+            parser = detector.get_reader(circuits, rack_spaces, presets)
+            break
+    if parser is None:
+        raise RuntimeError("Could not find reader for this config file.")
     parser.parse(cfg_path)
 
     return {
@@ -126,88 +36,6 @@ def parse_cfg(cfg_path: Path):
         'rack_spaces': rack_spaces,
         'presets': presets
     }
-
-
-class CfgMerger(XMLFilterBase):
-    circuits: dict[int, Circuit]
-    rack_spaces: bidict[int, int]
-    presets: dict[int, Preset]
-    _current_preset: Optional[Preset] = None
-
-    def __init__(self, circuits: dict[int, Circuit], rack_spaces: bidict[int, int], presets: dict[int, Preset],
-                 parent=None):
-        super().__init__(parent)
-        self.circuits = circuits
-        self.rack_spaces = rack_spaces
-        self.presets = presets
-
-    def _process_relay(self, attrs):
-        circuit = self.circuits.get(int(attrs['NUMBER']))
-        if circuit is None:
-            return
-        if circuit.space_num is not None:
-            attrs['SPACE'] = str(circuit.space_num)
-        if circuit.zone_num is not None:
-            attrs['ZONE'] = str(circuit.zone_num)
-
-    def _process_space(self, attrs):
-        if 'SPACEINRACK' in attrs:
-            rack_space_num = int(attrs['SPACEINRACK'])
-        elif 'SPACEINRACKEXT' in attrs:
-            rack_space_num = int(attrs['SPACEINRACKEXT'])
-        else:
-            raise RuntimeError('Bad Rack Space element.')
-        echo_space_num = self.rack_spaces.get(rack_space_num)
-        if echo_space_num is None:
-            return
-        if echo_space_num > 16 or echo_space_num < 1:
-            ext = 'EXT'
-            non_ext = ''
-        else:
-            ext = ''
-            non_ext = 'EXT'
-        new_attrs = {
-            'SPACEINRACK': str(rack_space_num),
-            'NUMBER': str(echo_space_num),
-            'NAME': ''
-        }
-        for k, v in new_attrs.items():
-            attrs[f'{k}{ext}'] = v
-            if f'{k}{non_ext}' in attrs:
-                del attrs[f'{k}{non_ext}']
-
-    def _process_preset(self, attrs):
-        self._current_preset = self.presets.get(int(attrs['NUMBER']))
-
-    def _process_prefadelevel(self, attrs):
-        if self._current_preset is None:
-            return
-        rack_space_num = int(attrs['SPACEINRACK'])
-        uptime = self._current_preset.fade_time.get(rack_space_num)
-        if uptime is not None:
-            attrs['UPTIME'] = str(uptime)
-
-    def _process_prelevel(self, attrs):
-        if self._current_preset is None:
-            return
-        relay_num = int(attrs['RELAY'])
-        level = self._current_preset.levels.get(relay_num)
-        if level is not None:
-            attrs['LEVEL'] = str(level)
-
-    _element_processors = {
-        'RELAY': _process_relay,
-        'SPACE': _process_space,
-        'PRESET': _process_preset,
-        'PREFADELEVEL': _process_prefadelevel,
-        'PRELEVEL': _process_prelevel,
-    }
-
-    def startElement(self, name, attrs):
-        attrs = dict(attrs)
-        if name in self._element_processors:
-            self._element_processors[name](self, attrs)
-        super().startElement(name, AttributesImpl(attrs))
 
 
 def config_to_ods(cfg_path: Path, ods_path: Path):
@@ -309,11 +137,18 @@ def ods_to_config(cfg_path: Path, ods_path: Path, out_path: Path):
                 presets[preset_num].fade_time[rack_spaces.inverse[space_num]] = uptime
 
     # Write config.
-    reader = CfgMerger(circuits, rack_spaces, presets, sax.make_parser())
+    parser = None
+    for detector_class in DETECTOR_CLASSES:
+        detector = detector_class(cfg_path)
+        if detector.is_valid():
+            parser = detector.get_writer(circuits, rack_spaces, presets, sax.make_parser())
+            break
+    if parser is None:
+        raise RuntimeError("Could not find reader for this config file.")
     with out_path.open('w') as out_file:
         parser_handler = XMLGenerator(out_file, encoding='utf-8', short_empty_elements=True)
-        reader.setContentHandler(parser_handler)
-        reader.parse(cfg_path)
+        parser.setContentHandler(parser_handler)
+        parser.parse(cfg_path)
 
 
 def main():
@@ -321,8 +156,8 @@ def main():
     subparsers = parser.add_subparsers(title='subcommands')
     to_ods_parser = subparsers.add_parser('to_ods', help='Convert a panel config to ODS.')
     to_ods_parser.set_defaults(command='to_ods')
-    to_ods_parser.add_argument('cfg', type=lambda p:Path(p), help='Path to saved panel config.')
-    to_ods_parser.add_argument('ods', type=lambda p:Path(p), help='Path to generated ODS file.')
+    to_ods_parser.add_argument('cfg', type=lambda p: Path(p), help='Path to saved panel config.')
+    to_ods_parser.add_argument('ods', type=lambda p: Path(p), help='Path to generated ODS file.')
     to_cfg_parser = subparsers.add_parser('to_cfg', help='Convert an ODS file to a panel config.')
     to_cfg_parser.set_defaults(command='to_cfg')
     to_cfg_parser.add_argument('cfg', type=lambda p: Path(p), help='Path to original panel config.')
