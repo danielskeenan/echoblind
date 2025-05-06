@@ -8,10 +8,12 @@ import pyexcel
 from bidict import bidict
 
 from echoblind.echotypes import Circuit, optional_int, Preset
+from echoblind.rack.eacp import EchoACPDetector
 from echoblind.rack.epcp import EchoPCPDetector
 
 DETECTOR_CLASSES = [
     EchoPCPDetector,
+    EchoACPDetector
 ]
 
 

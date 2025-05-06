@@ -11,6 +11,7 @@ class BaseConfigReader(ABC, sax.ContentHandler):
     """Base class for config readers."""
     OUTPUT_TAG_NAME = 'OUTPUT'
     OUTPUT_ATTR_NAME = 'OUTPUT'
+    FADETIME_ATTR_NAME = 'UPTIME'
 
     circuits: dict[int, Circuit]
     rack_spaces: bidict[int, int]
@@ -53,7 +54,7 @@ class BaseConfigReader(ABC, sax.ContentHandler):
         self.current_preset = Preset(num=int(attrs['NUMBER']))
 
     def process_prefadelevel(self, attrs):
-        self.current_preset.fade_time[int(attrs['SPACEINRACK'])] = int(attrs['UPTIME'])
+        self.current_preset.fade_time[int(attrs['SPACEINRACK'])] = int(attrs[self.FADETIME_ATTR_NAME])
 
     def process_prelevel(self, attrs):
         self.current_preset.levels[int(attrs[self.OUTPUT_ATTR_NAME])] = int(attrs['LEVEL'])

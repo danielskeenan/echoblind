@@ -12,6 +12,7 @@ class BaseConfigWriter(ABC, XMLFilterBase):
     """Base class for config writers."""
     OUTPUT_TAG_NAME = 'OUTPUT'
     OUTPUT_ATTR_NAME = 'OUTPUT'
+    FADETIME_ATTR_NAME = 'UPTIME'
 
     circuits: dict[int, Circuit]
     rack_spaces: bidict[int, int]
@@ -69,7 +70,7 @@ class BaseConfigWriter(ABC, XMLFilterBase):
         rack_space_num = int(attrs['SPACEINRACK'])
         uptime = self._current_preset.fade_time.get(rack_space_num)
         if uptime is not None:
-            attrs['UPTIME'] = str(uptime)
+            attrs[self.FADETIME_ATTR_NAME] = str(uptime)
 
     def process_prelevel(self, attrs):
         if self._current_preset is None:

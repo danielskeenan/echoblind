@@ -10,38 +10,39 @@ from echoblind.rack.configwriter import BaseConfigWriter
 from echoblind.rack.detector import BaseDetector
 
 
-class EchoPCPConfigReader(BaseConfigReader):
-    OUTPUT_TAG_NAME = 'RELAY'
-    OUTPUT_ATTR_NAME = 'RELAY'
-    FADETIME_ATTR_NAME = 'UPTIME'
+class EchoACPConfigReader(BaseConfigReader):
+    OUTPUT_TAG_NAME = 'OUTPUT'
+    OUTPUT_ATTR_NAME = 'OUTPUT'
+    FADETIME_ATTR_NAME = 'PREFADELEVEL'
 
 
-class EchoPCPConfigWriter(BaseConfigWriter):
-    OUTPUT_TAG_NAME = 'RELAY'
-    OUTPUT_ATTR_NAME = 'RELAY'
-    FADETIME_ATTR_NAME = 'UPTIME'
+class EchoACPConfigWriter(BaseConfigWriter):
+    OUTPUT_TAG_NAME = 'OUTPUT'
+    OUTPUT_ATTR_NAME = 'OUTPUT'
+    FADETIME_ATTR_NAME = 'PREFADELEVEL'
 
-class EchoPCPDetector(BaseDetector):
+
+class EchoACPDetector(BaseDetector):
     def is_valid(self) -> bool:
         tree = ET.parse(self.path)
         root = tree.getroot()
 
         # Is this a PCP.
-        if root.tag != 'SMARTSWITCH2':
+        if root.tag != 'EACP':
             return False
 
         # Check version.
-        cabinet = root.find("CABINET")
-        if cabinet is None:
+        rack = root.find("RACK")
+        if rack is None:
             return False
-        cabinet_version = cabinet.attrib.get('VERSION')
-        if cabinet_version is None:
+        rack_version = rack.attrib.get('VERSION')
+        if rack_version is None:
             return False
         try:
-            cabinet_version = Version(cabinet_version)
+            rack_version = Version(rack_version)
         except InvalidVersion:
             return False
-        if cabinet_version < Version("3.1") or cabinet_version >= Version("4"):
+        if rack_version < Version("1.3") or rack_version >= Version("2.1"):
             return False
 
         return True
@@ -49,11 +50,11 @@ class EchoPCPDetector(BaseDetector):
     def get_reader(self, circuits: dict[int, Circuit], rack_spaces: bidict[int, int],
                    presets: dict[int, Preset]):
         parser = sax.make_parser()
-        parser_handler = EchoPCPConfigReader(circuits, rack_spaces, presets)
+        parser_handler = EchoACPConfigReader(circuits, rack_spaces, presets)
         parser.setContentHandler(parser_handler)
 
         return parser
 
     def get_writer(self, circuits: dict[int, Circuit], rack_spaces: bidict[int, int], presets: dict[int, Preset],
                    parent=None):
-        return EchoPCPConfigWriter(circuits, rack_spaces, presets, sax.make_parser())
+        return EchoACPConfigWriter(circuits, rack_spaces, presets, sax.make_parser())
