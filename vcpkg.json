@@ -1,0 +1,12 @@
+{
+  "name" : "echoblind",
+  "version-string" : "1.0.0",
+  "builtin-baseline" : "bc994510d2eb11aac7b43b03f67a7751d5bfe0e4",
+  "dependencies" : [ {
+    "name" : "catch2",
+    "version>=" : "3.8.1"
+  }, {
+    "name" : "boost-bimap",
+    "version>=" : "1.87.0"
+  } ]
+}
