@@ -83,16 +83,13 @@ namespace echoconfig
                         throw std::runtime_error("Failed to read space attribute");
                     }
                     const unsigned int echoSpaceNum = xml_helpers::requiredAttrUInt(xml, numberAttr);
-                    unsigned int rackSpaceNum;
+
                     if (echoSpaceNum == 0)
                     {
-                        rackSpaceNum = 0;
+                        continue;
                     }
-                    else
-                    {
-                        rackSpaceNum = xml_helpers::requiredAttrUInt(xml, spaceAttr);
-                    }
-                    rackSpaces_.left.insert({rackSpaceNum, echoSpaceNum});
+                    const unsigned int rackSpaceNum = xml_helpers::requiredAttrUInt(xml, spaceAttr);
+                    rackSpaces_.insert_or_assign(rackSpaceNum, echoSpaceNum);
                     auto& space = spaces_[echoSpaceNum];
                     space.num = echoSpaceNum;
                 }
@@ -114,15 +111,12 @@ namespace echoconfig
                     }
                     const auto fadeTime = xml_helpers::requiredAttrUInt(xml, fadeTimeAttrName());
                     const auto rackSpaceNum = xml_helpers::requiredAttrUInt(xml, QStringLiteral("SPACEINRACK"));
-                    try
+                    const auto echoSpaceNum = rackSpaces_.find(rackSpaceNum);
+                    if (echoSpaceNum == rackSpaces_.end())
                     {
-                        const auto echoSpaceNum = rackSpaces_.left.at(rackSpaceNum);
-                        currentPreset->fadeTimes[echoSpaceNum] = fadeTime;
+                        continue;
                     }
-                    catch (const std::out_of_range&)
-                    {
-                        throw std::runtime_error("No matching Echo preset.");
-                    }
+                    currentPreset->fadeTimes[echoSpaceNum->second] = fadeTime;
                 }
                 else if (tagName == QStringLiteral("PRELEVEL"))
                 {
@@ -133,6 +127,13 @@ namespace echoconfig
                     const auto level = xml_helpers::requiredAttrUInt(xml, QStringLiteral("LEVEL"));
                     const auto circuit = xml_helpers::requiredAttrUInt(xml, outputAttrName());
                     currentPreset->levels[circuit] = level;
+                }
+            }
+            else if (tokenType == QXmlStreamReader::EndDocument)
+            {
+                if (currentPreset.has_value())
+                {
+                    presets_.insert_or_assign(currentPreset->num, currentPreset.value());
                 }
             }
         }
@@ -219,7 +220,7 @@ namespace echoconfig
                     const unsigned int rackSpaceNum = xml_helpers::requiredAttrUInt(xmlIn, spaceAttr);
                     try
                     {
-                        const auto echoSpaceNum = rackSpaces_.left.at(rackSpaceNum);
+                        const auto echoSpaceNum = rackSpaces_.at(rackSpaceNum);
                         if (echoSpaceNum > 16 || echoSpaceNum < 1)
                         {
                             spaceAttr = kSpaceInRackExt;
@@ -259,7 +260,7 @@ namespace echoconfig
                     const auto rackSpaceNum = xml_helpers::requiredAttrUInt(xmlIn, QStringLiteral("SPACEINRACK"));
                     try
                     {
-                        const auto echoSpaceNum = rackSpaces_.left.at(rackSpaceNum);
+                        const auto echoSpaceNum = rackSpaces_.at(rackSpaceNum);
                         const auto fadeTime = currentPreset->fadeTimes.at(echoSpaceNum);
                         xml_helpers::replaceAttr(attrs, fadeTimeAttrName(), QString::number(fadeTime));
                     }
@@ -349,7 +350,7 @@ namespace echoconfig
     const Space& EchoPcpConfig::getSpaceAtRack(unsigned int ix) const
     {
         Q_ASSERT(ix < spaces_.size());
-        auto rackIt = rackSpaces_.left.begin();
+        auto rackIt = rackSpaces_.begin();
         std::advance(rackIt, ix);
         const auto echoSpaceNum = rackIt->second;
         return spaces_.at(echoSpaceNum);
@@ -358,7 +359,7 @@ namespace echoconfig
     Space& EchoPcpConfig::getSpaceAtRack(unsigned int ix)
     {
         Q_ASSERT(ix < spaces_.size());
-        auto rackIt = rackSpaces_.left.begin();
+        auto rackIt = rackSpaces_.begin();
         std::advance(rackIt, ix);
         const auto echoSpaceNum = rackIt->second;
         return spaces_.at(echoSpaceNum);

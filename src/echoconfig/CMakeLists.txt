@@ -12,11 +12,9 @@ add_library(echoconfig STATIC
         xml_helpers.cpp
 )
 
-find_package(Boost CONFIG COMPONENTS bimap REQUIRED)
 include(qxlsx)
 target_link_libraries(echoconfig PUBLIC
         Qt::Core
-        Boost::bimap
 )
 target_link_libraries(echoconfig PRIVATE
         QXlsx

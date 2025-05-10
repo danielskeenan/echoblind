@@ -16,6 +16,12 @@ namespace echoconfig
      */
     class Circuit
     {
+        friend std::ostream& operator<<(std::ostream& os, const Circuit& val)
+        {
+            os << "<Circuit " << val.num << ": S" << val.space << "Z" << val.zone << ">";
+            return os;
+        }
+
     public:
         auto operator<=>(const Circuit&) const = default;
 

@@ -32,7 +32,14 @@ namespace echoconfig
     public:
         using QObject::QObject;
 
-        [[nodiscard]] static Config* loadCfg();
+        /**
+         * Load a config file of unknown type.
+         *
+         * If the file could not be loaded, returns nullptr.
+         *
+         * @return
+         */
+        [[nodiscard]] static Config* loadCfg(const QString& path);
 
         [[nodiscard]] virtual QString panelType() const = 0;
 
@@ -91,6 +98,24 @@ namespace echoconfig
         void saveSheetLevels(QXlsx::Document* doc) const;
         void openSheetTimes(const QXlsx::Document* doc);
         void saveSheetTimes(QXlsx::Document* doc) const;
+    };
+
+    template <class C>
+    concept ConfigClass = std::derived_from<C, Config>;
+
+    /**
+     * Generic class to simplify specifying config loaders.
+     * @tparam C A derivative of echoconfig::Config.
+     */
+    template <ConfigClass C>
+    struct ConfigLoader
+    {
+        Config* operator()(const QString& path) const
+        {
+            C* cfg = new C();
+            cfg->parseCfg(path);
+            return cfg;
+        }
     };
 } // namespace echoconfig
 

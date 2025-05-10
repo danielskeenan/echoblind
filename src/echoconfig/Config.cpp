@@ -10,15 +10,41 @@
 #include <QFile>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QTemporaryDir>
 #include <optional>
 #include <regex>
 #include <xlsxdocument.h>
 #include <xlsxworkbook.h>
+
+#include "echoconfig/EchoPcpConfig.h"
 #include "echoconfig/sheet_helpers.h"
 
 namespace echoconfig
 {
     static const auto kRePreset = QRegularExpression(R"(^Preset (\d+)$)");
+
+    Config* Config::loadCfg(const QString& path)
+    {
+        // ADD CONFIG TYPES HERE!
+        const auto loaders = {
+            ConfigLoader<EchoPcpConfig>(),
+        };
+
+        for (const auto& loader : loaders)
+        {
+            try
+            {
+                return loader(path);
+            }
+            catch (const std::exception&)
+            {
+                // Try the next one.
+                continue;
+            }
+        }
+
+        return nullptr;
+    }
 
     void Config::parseSheet(const QString& path)
     {
@@ -46,9 +72,10 @@ namespace echoconfig
     {
         QXlsx::Document doc;
         auto book = doc.workbook();
+        bool success;
 
         // Levels sheet.
-        book->renameSheet(kSheetIxLevels, tr("Levels"));
+        book->addSheet(tr("Levels"));
         book->setActiveSheet(kSheetIxLevels);
         saveSheetLevels(&doc);
 
@@ -58,12 +85,16 @@ namespace echoconfig
         saveSheetTimes(&doc);
 
         // Save.
-        QSaveFile f(path);
+        book->setActiveSheet(kSheetIxLevels);
+        // Can't use QSaveFile because the library calls close() on the file.
+        QTemporaryDir saveDir;
+        QFile f(saveDir.filePath("save.tmp"));
         f.open(QIODevice::WriteOnly);
-        auto success = doc.saveAs(&f);
+        success = doc.saveAs(&f);
         if (success)
         {
-            success = f.commit();
+            QFile::remove(path);
+            success = f.copy(path);
         }
         if (!success)
         {
@@ -153,26 +184,26 @@ namespace echoconfig
 
     void Config::saveSheetLevels(QXlsx::Document* doc) const
     {
-        constexpr auto kColCircuit = 0;
-        constexpr auto kColSpace = 1;
-        constexpr auto kColZone = 2;
-        constexpr auto kColPreset = 3;
+        constexpr auto kColCircuit = 1;
+        constexpr auto kColSpace = 2;
+        constexpr auto kColZone = 3;
+        constexpr auto kColPreset = 4;
 
         // Header.
-        doc->write(0, kColCircuit, tr("Circuit"));
-        doc->write(0, kColSpace, tr("Space"));
-        doc->write(0, kColZone, tr("Zone"));
+        doc->write(1, kColCircuit, tr("Circuit"));
+        doc->write(1, kColSpace, tr("Space"));
+        doc->write(1, kColZone, tr("Zone"));
         for (unsigned int presetIx = 0; presetIx < presetCount(); ++presetIx)
         {
             const auto& preset = getPresetAt(presetIx);
-            doc->write(0, kColPreset + preset.num - 1, tr("Preset %1").arg(preset.num));
+            doc->write(1, kColPreset + preset.num - 1, tr("Preset %1").arg(preset.num));
         }
 
         // Values.
         for (unsigned int circuitIx = 0; circuitIx < circuitCount(); ++circuitIx)
         {
             const auto& circuit = getCircuitAt(circuitIx);
-            const auto row = circuitIx + 1;
+            const auto row = circuitIx + 2;
             doc->write(row, kColCircuit, circuit.num);
             doc->write(row, kColSpace, circuit.space);
             doc->write(row, kColZone, circuit.zone);
@@ -186,27 +217,27 @@ namespace echoconfig
 
     void Config::saveSheetTimes(QXlsx::Document* doc) const
     {
-        constexpr auto kColSpace = 0;
-        constexpr auto kColPreset = 1;
+        constexpr auto kColSpace = 1;
+        constexpr auto kColPreset = 2;
 
         // Header.
-        doc->write(0, kColSpace, tr("Space"));
+        doc->write(1, kColSpace, tr("Space"));
         for (unsigned int presetIx = 0; presetIx < presetCount(); ++presetIx)
         {
             const auto& preset = getPresetAt(presetIx);
-            doc->write(0, kColPreset + preset.num - 1, tr("Preset %1").arg(preset.num));
+            doc->write(1, kColPreset + preset.num - 1, tr("Preset %1").arg(preset.num));
         }
 
         // Values.
         for (unsigned int spaceIx = 0; spaceIx < spaceCount(); ++spaceIx)
         {
             const auto& space = getSpaceAt(spaceIx);
-            const auto row = spaceIx + 1;
+            const auto row = spaceIx + 2;
             doc->write(row, kColSpace, space.num);
             for (unsigned int presetIx = 0; presetIx < presetCount(); ++presetIx)
             {
                 const auto& preset = getPresetAt(presetIx);
-                doc->write(0, kColPreset + preset.num - 1, preset.fadeTimes.at(space.num));
+                doc->write(row, kColPreset + preset.num - 1, preset.fadeTimes.at(space.num));
             }
         }
     }
