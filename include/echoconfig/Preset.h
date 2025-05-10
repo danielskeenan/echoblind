@@ -16,6 +16,8 @@ namespace echoconfig
     class Preset
     {
     public:
+        auto operator<=>(const Preset&) const = default;
+
         unsigned int num;
         /** Space num > fade time (seconds) */
         std::map<unsigned int, unsigned int> fadeTimes;

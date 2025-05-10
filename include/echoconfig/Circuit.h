@@ -17,9 +17,11 @@ namespace echoconfig
     class Circuit
     {
     public:
+        auto operator<=>(const Circuit&) const = default;
+
         unsigned int num;
-        unsigned int space_num;
-        unsigned int zone_num;
+        unsigned int space;
+        unsigned int zone;
     };
 } // namespace echoconfig
 

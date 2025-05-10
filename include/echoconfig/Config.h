@@ -9,32 +9,46 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <QObject>
 #include <QString>
-#include <map>
 #include "Circuit.h"
 #include "Preset.h"
+#include "Space.h"
+
+// Forward-declare Xlsx document so we don't force a downstream dependency.
+namespace QXlsx
+{
+    class Document;
+}
 
 namespace echoconfig
 {
     /**
      * Base class for panel configurations.
      */
-    class Config
+    class Config : public QObject
     {
+        Q_OBJECT
     public:
-        virtual ~Config() = default;
+        using QObject::QObject;
 
-        [[nodiscard]] virtual QString configType() const = 0;
+        [[nodiscard]] static Config* loadCfg();
+
+        [[nodiscard]] virtual QString panelType() const = 0;
+
+        [[nodiscard]] virtual QString panelName() const = 0;
 
         /**
          * Parse a panel configuration file.
          * @param path Path to config file.
+         * @throws std::runtime_error if the config cannot be parsed.
          */
         virtual void parseCfg(const QString& path) = 0;
 
         /**
          * Parse a spreadsheet file.
          * @param path Path to spreadsheet file.
+         * @throws std::runtime_error if the sheet cannot be parsed.
          */
         void parseSheet(const QString& path);
 
@@ -51,9 +65,32 @@ namespace echoconfig
          */
         void saveSheet(const QString& path) const;
 
-    protected:
-        std::map<unsigned int, Circuit> circuits_;
-        std::map<unsigned int, Preset> presets_;
+        [[nodiscard]] virtual unsigned int circuitCount() const = 0;
+        [[nodiscard]] virtual const Circuit& getCircuitAt(unsigned int ix) const = 0;
+        [[nodiscard]] virtual Circuit& getCircuitAt(unsigned int ix) = 0;
+        [[nodiscard]] virtual const Circuit& getCircuit(unsigned int num) const = 0;
+        [[nodiscard]] virtual Circuit& getCircuit(unsigned int num) = 0;
+
+        [[nodiscard]] virtual unsigned int spaceCount() const = 0;
+        [[nodiscard]] virtual const Space& getSpaceAt(unsigned int ix) const = 0;
+        [[nodiscard]] virtual Space& getSpaceAt(unsigned int ix) = 0;
+        [[nodiscard]] virtual const Space& getSpace(unsigned int num) const = 0;
+        [[nodiscard]] virtual Space& getSpace(unsigned int num) = 0;
+
+        [[nodiscard]] virtual unsigned int presetCount() const = 0;
+        [[nodiscard]] virtual const Preset& getPresetAt(unsigned int ix) const = 0;
+        [[nodiscard]] virtual Preset& getPresetAt(unsigned int ix) = 0;
+        [[nodiscard]] virtual const Preset& getPreset(unsigned int num) const = 0;
+        [[nodiscard]] virtual Preset& getPreset(unsigned int num) = 0;
+
+    private:
+        static constexpr auto kSheetIxLevels = 0;
+        static constexpr auto kSheetIxTimes = 1;
+
+        void openSheetLevels(const QXlsx::Document* doc);
+        void saveSheetLevels(QXlsx::Document* doc) const;
+        void openSheetTimes(const QXlsx::Document* doc);
+        void saveSheetTimes(QXlsx::Document* doc) const;
     };
 } // namespace echoconfig
 
