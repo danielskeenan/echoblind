@@ -1,7 +1,10 @@
 qt_add_executable(${PROJECT_NAME} WIN32 MACOSX_BUNDLE
         main.cpp
+        FileSelectorWidget.h
+        FileSelectorWidget.cpp
         MainWindow.h
         MainWindow.cpp
+        Settings.h
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

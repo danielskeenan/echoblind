@@ -9,7 +9,12 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QLabel>
+#include <QLineEdit>
 #include <QMainWindow>
+#include <QPushButton>
+
+#include "FileSelectorWidget.h"
 
 namespace echoblind
 {
@@ -23,8 +28,17 @@ namespace echoblind
     private:
         struct Widgets
         {
+            FileSelectorWidget* baseCfgPath = nullptr;
+            QLabel* rackTypeLabel = nullptr;
+            QLabel* rackNameLabel = nullptr;
+            FileSelectorWidget* sheetLine = nullptr;
+            FileSelectorWidget* outCfgLine = nullptr;
+            QPushButton* saveSheetButton = nullptr;
+            QPushButton* loadSheetButton = nullptr;
         };
         Widgets widgets_;
+
+        void initUi();
     };
 
 } // namespace echoblind
