@@ -22,6 +22,7 @@ namespace echoconfig
         [[nodiscard]] QString panelName() const override { return name_; }
 
         void parseCfg(const QString& path) override;
+        void parseSheet(const QString& path) override;
         void saveCfg(const QString& basePath, const QString& outPath) const override;
 
         [[nodiscard]] unsigned circuitCount() const override { return circuits_.size(); }

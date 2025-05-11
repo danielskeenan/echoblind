@@ -110,9 +110,9 @@ namespace echoconfig
         std::map<unsigned int, int> colPresets;
 
         // Columns
-        for (int colIx = 0; colIx < doc->dimension().columnCount(); ++colIx)
+        for (int colIx = 1; colIx <= doc->dimension().columnCount(); ++colIx)
         {
-            const auto val = doc->read(0, colIx);
+            const auto val = doc->read(1, colIx);
             if (!val.isValid() || val.toString().isEmpty())
             {
                 break;
@@ -157,7 +157,7 @@ namespace echoconfig
         }
 
         // Data.
-        for (int rowIx = 0; rowIx < doc->dimension().rowCount(); ++rowIx)
+        for (int rowIx = 2; rowIx <= doc->dimension().rowCount(); ++rowIx)
         {
             const auto circuitNum = sheet_helpers::requiredCellUInt(doc, rowIx, colCircuit.value());
             const auto spaceNum = sheet_helpers::requiredCellUInt(doc, rowIx, colSpace.value());
@@ -167,6 +167,9 @@ namespace echoconfig
             circuit.num = circuitNum;
             circuit.space = spaceNum;
             circuit.zone = zoneNum;
+
+            auto& space = getSpace(spaceNum);
+            space.num = spaceNum;
 
             for (const auto [presetNum, colPreset] : colPresets)
             {
@@ -248,9 +251,9 @@ namespace echoconfig
         std::map<unsigned int, int> colPresets;
 
         // Columns
-        for (int colIx = 0; colIx < doc->dimension().columnCount(); ++colIx)
+        for (int colIx = 1; colIx <= doc->dimension().columnCount(); ++colIx)
         {
-            const auto val = doc->read(0, colIx);
+            const auto val = doc->read(1, colIx);
             if (!val.isValid() || val.toString().isEmpty())
             {
                 break;
@@ -279,9 +282,11 @@ namespace echoconfig
         }
 
         // Data.
-        for (int rowIx = 0; rowIx < doc->dimension().rowCount(); ++rowIx)
+        for (int rowIx = 2; rowIx <= doc->dimension().rowCount(); ++rowIx)
         {
             const auto spaceNum = sheet_helpers::requiredCellUInt(doc, rowIx, colSpace.value());
+            auto& space = getSpace(spaceNum);
+            space.num = spaceNum;
 
             for (const auto [presetNum, colPreset] : colPresets)
             {

@@ -143,6 +143,25 @@ namespace echoconfig
         }
     }
 
+    void EchoPcpConfig::parseSheet(const QString& path)
+    {
+        Config::parseSheet(path);
+
+        // Update space mapping.
+        rackSpaces_.clear();
+        std::vector<unsigned int> echoSpaceNums;
+        for (const auto echoSpaceNum : spaces_ | std::views::keys)
+        {
+            echoSpaceNums.push_back(echoSpaceNum);
+        }
+        std::ranges::sort(echoSpaceNums);
+        auto echoSpaceNumsIt = echoSpaceNums.cbegin();
+        for (unsigned int rackSpaceNum = 1; echoSpaceNumsIt != echoSpaceNums.cend(); ++echoSpaceNumsIt, ++rackSpaceNum)
+        {
+            rackSpaces_.emplace(rackSpaceNum, *echoSpaceNumsIt);
+        }
+    }
+
     void EchoPcpConfig::saveCfg(const QString& basePath, const QString& outPath) const
     {
         QFile fIn(basePath);
@@ -218,72 +237,66 @@ namespace echoconfig
                         throw std::runtime_error("Failed to read space attribute");
                     }
                     const unsigned int rackSpaceNum = xml_helpers::requiredAttrUInt(xmlIn, spaceAttr);
-                    try
+                    unsigned int echoSpaceNum = 0;
+                    const auto echoSpaceNumIt = rackSpaces_.find(rackSpaceNum);
+                    if (echoSpaceNumIt != rackSpaces_.end())
                     {
-                        const auto echoSpaceNum = rackSpaces_.at(rackSpaceNum);
-                        if (echoSpaceNum > 16 || echoSpaceNum < 1)
-                        {
-                            spaceAttr = kSpaceInRackExt;
-                            numberAttr = kNumberExt;
-                        }
-                        else
-                        {
-                            spaceAttr = kSpaceInRack;
-                            numberAttr = kNumber;
-                        }
-                        xml_helpers::replaceAttr(attrs, spaceAttr, QString::number(rackSpaceNum));
-                        xml_helpers::replaceAttr(attrs, numberAttr, QString::number(echoSpaceNum));
+                        echoSpaceNum = echoSpaceNumIt->second;
                     }
-                    catch (const std::out_of_range&)
+                    if (echoSpaceNum > 16 || echoSpaceNum < 1)
                     {
-                        throw std::runtime_error("No matching Echo space.");
+                        spaceAttr = kSpaceInRackExt;
+                        numberAttr = kNumberExt;
                     }
+                    else
+                    {
+                        spaceAttr = kSpaceInRack;
+                        numberAttr = kNumber;
+                    }
+                    xml_helpers::replaceAttr(attrs, spaceAttr, QString::number(rackSpaceNum));
+                    xml_helpers::replaceAttr(attrs, numberAttr, QString::number(echoSpaceNum));
                 }
                 else if (tagName == QStringLiteral("PRESET"))
                 {
                     const auto presetNum = xml_helpers::requiredAttrUInt(xmlIn, QStringLiteral("NUMBER"));
-                    try
+                    const auto currentPresetIt = presets_.find(presetNum);
+                    if (currentPresetIt != presets_.end())
                     {
-                        currentPreset = presets_.at(presetNum);
+                        currentPreset = currentPresetIt->second;
                     }
-                    catch (const std::out_of_range&)
+                    else
                     {
-                        throw std::runtime_error("No matching Echo preset.");
+                        currentPreset.reset();
                     }
                 }
                 else if (tagName == QStringLiteral("PREFADELEVEL"))
                 {
-                    if (!currentPreset.has_value())
+                    if (currentPreset.has_value())
                     {
-                        throw std::runtime_error("No current preset.");
-                    }
-                    const auto rackSpaceNum = xml_helpers::requiredAttrUInt(xmlIn, QStringLiteral("SPACEINRACK"));
-                    try
-                    {
-                        const auto echoSpaceNum = rackSpaces_.at(rackSpaceNum);
-                        const auto fadeTime = currentPreset->fadeTimes.at(echoSpaceNum);
-                        xml_helpers::replaceAttr(attrs, fadeTimeAttrName(), QString::number(fadeTime));
-                    }
-                    catch (const std::out_of_range&)
-                    {
-                        throw std::runtime_error("No matching Echo space.");
+                        const auto rackSpaceNum = xml_helpers::requiredAttrUInt(xmlIn, QStringLiteral("SPACEINRACK"));
+                        unsigned int echoSpaceNum = 0;
+                        const auto echoSpaceNumIt = rackSpaces_.find(rackSpaceNum);
+                        if (echoSpaceNumIt != rackSpaces_.end())
+                        {
+                            echoSpaceNum = echoSpaceNumIt->second;
+                        }
+                        const auto fadeTimeIt = currentPreset->fadeTimes.find(echoSpaceNum);
+                        if (fadeTimeIt != currentPreset->fadeTimes.end())
+                        {
+                            xml_helpers::replaceAttr(attrs, fadeTimeAttrName(), QString::number(fadeTimeIt->second));
+                        }
                     }
                 }
                 else if (tagName == QStringLiteral("PRELEVEL"))
                 {
-                    if (!currentPreset.has_value())
+                    if (currentPreset.has_value())
                     {
-                        throw std::runtime_error("No current preset.");
-                    }
-                    const auto circuit = xml_helpers::requiredAttrUInt(xmlIn, outputAttrName());
-                    try
-                    {
-                        const auto level = currentPreset->levels.at(circuit);
-                        xml_helpers::replaceAttr(attrs, QStringLiteral("LEVEL"), QString::number(level));
-                    }
-                    catch (const std::out_of_range&)
-                    {
-                        throw std::runtime_error("No matching Echo circuit.");
+                        const auto circuit = xml_helpers::requiredAttrUInt(xmlIn, outputAttrName());
+                        const auto levelIt = currentPreset->levels.find(circuit);
+                        if (levelIt != currentPreset->levels.end())
+                        {
+                            xml_helpers::replaceAttr(attrs, QStringLiteral("LEVEL"), QString::number(levelIt->second));
+                        }
                     }
                 }
 

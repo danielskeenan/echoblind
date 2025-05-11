@@ -35,7 +35,7 @@ if (BUILD_EXEC)
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTOUIC ON)
     set(CMAKE_AUTORCC ON)
-    find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
+    find_package(Qt6 COMPONENTS Core Widgets Xml REQUIRED)
     add_compile_definitions(QT_NO_KEYWORDS)
     add_subdirectory(src)
 

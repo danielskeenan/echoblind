@@ -33,10 +33,14 @@ public:
         {
             doc_.workbook()->setActiveSheet(ix);
             other.workbook()->setActiveSheet(ix);
+
+            // Check size.
             if (doc_.dimension() != other.dimension())
             {
                 return false;
             }
+
+            // Get all cells.
             int lhsMaxRow, lhsMaxCol, rhsMaxRow, rhsMaxCol;
             auto lhsCells = doc_.currentWorksheet()->getFullCells(&lhsMaxRow, &lhsMaxCol);
             std::sort(lhsCells.begin(), lhsCells.end(), &XlsxMatcher::cmpCellLocation);
@@ -46,6 +50,13 @@ public:
             auto rhsCellsIt = rhsCells.cbegin();
             for (; lhsCellsIt != lhsCells.cend() && rhsCellsIt != rhsCells.cend(); ++lhsCellsIt, ++rhsCellsIt)
             {
+                // Check location.
+                if (lhsCellsIt->row != rhsCellsIt->row || lhsCellsIt->col != rhsCellsIt->col)
+                {
+                    return false;
+                }
+
+                // Check values.
                 const auto lhsCell = lhsCellsIt->cell;
                 const auto rhsCell = rhsCellsIt->cell;
                 if (lhsCell->cellType() != rhsCell->cellType())

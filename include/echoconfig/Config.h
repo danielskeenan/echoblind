@@ -57,7 +57,7 @@ namespace echoconfig
          * @param path Path to spreadsheet file.
          * @throws std::runtime_error if the sheet cannot be parsed.
          */
-        void parseSheet(const QString& path);
+        virtual void parseSheet(const QString& path);
 
         /**
          * Save to a new configuration file.
@@ -70,7 +70,7 @@ namespace echoconfig
          * Save to spreadsheet file.
          * @param path Path to spreadsheet file.
          */
-        void saveSheet(const QString& path) const;
+        virtual void saveSheet(const QString& path) const;
 
         [[nodiscard]] virtual unsigned int circuitCount() const = 0;
         [[nodiscard]] virtual const Circuit& getCircuitAt(unsigned int ix) const = 0;

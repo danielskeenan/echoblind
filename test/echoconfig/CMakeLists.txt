@@ -7,6 +7,7 @@ target_link_libraries(echoconfig_test PRIVATE
         Catch2::Catch2WithMain
         echoconfig
         Qt::Core
+        Qt::Xml
         QXlsx
 )
 target_compile_definitions(echoconfig_test PRIVATE "RESOURCES_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/resources\"")
