@@ -1,0 +1,166 @@
+name: Build
+
+on:
+  push: ~
+  pull_request: ~
+  workflow_dispatch: ~
+
+env:
+  SOURCE_DIR: ${{github.workspace}}
+  BUILD_DIR: ${{github.workspace}}/build
+  QT_VERSION: 6.8.*
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ${{ matrix.system.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        system:
+          #          - os: ubuntu-latest
+          #            generator: Ninja
+          - os: windows-latest
+        build_type:
+          - Release
+    env:
+      CMAKE_GENERATOR: ${{ matrix.system.generator }}
+      # See https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
+    steps:
+      - name: Get number of CPU cores
+        uses: SimenB/github-actions-cpu-cores@v2
+        id: cpu-cores
+
+      - name: Set CMake Parallel level
+        run: |
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=${{ steps.cpu-cores.outputs.count }}" >> ${GITHUB_ENV}
+          echo "CTEST_PARALLEL_LEVEL=1" >> ${GITHUB_ENV}
+
+      # See https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - uses: actions/checkout@v4
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+
+      - name: Install system deps (Linux)
+        if: ${{runner.os == 'Linux'}}
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install ninja-build
+
+      - name: Install system deps (macOS)
+        if: ${{runner.os == 'macOS'}}
+        run: |
+          brew install ninja
+
+      - name: Install Qt
+        # Don't need this on Linux, as Qt will come from the system package manager above
+        if: ${{runner.os != 'Linux'}}
+        uses: jurplel/install-qt-action@v4
+        with:
+          dir: ${{github.workspace}}/.qt
+          version: ${{env.QT_VERSION}}
+          cache: false
+
+      #######################
+      # BUILD
+      #######################
+      - name: Configure CMake
+        run: >
+          cmake
+          -B "${BUILD_DIR}"
+          -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -S "${{ github.workspace }}"
+          -DBUILD_TESTING=On
+      #          -DBUILD_PACKAGE=On
+
+      - name: Build
+        run: cmake --build "${BUILD_DIR}" --config ${{ matrix.build_type }}
+
+      #######################
+      # TEST
+      #######################
+      - name: Test
+        working-directory: ${{env.BUILD_DIR}}
+        run: ctest --build-config ${{ matrix.build_type }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: test_results_${{runner.os}}
+          path: ${{env.BUILD_DIR}}/Testing/Temporary/LastTest.log
+
+#      #######################
+#      # PACKAGE
+#      #######################
+#      - name: Package
+#        working-directory: ${{env.BUILD_DIR}}
+#        run: cpack -B "${BUILD_DIR}/packages"
+#
+#      - name: Upload failed package artifacts
+#        uses: actions/upload-artifact@v4
+#        if: ${{ failure() }}
+#        with:
+#          name: failed_package_${{runner.os}}
+#          path: ${{env.BUILD_DIR}}/packages
+#
+#      - name: Upload packages
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: packages_${{runner.os}}_${{runner.arch}}
+#          path: ${{env.BUILD_DIR}}/packages/*.*
+#          if-no-files-found: error
+#
+#  #######################
+#  # RELEASE
+#  #######################
+#  release:
+#    needs:
+#      - build
+#    runs-on: ubuntu-latest
+#    if: ${{ github.ref_type == 'tag' }}
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          path: repo
+#
+#      - name: Get built packages
+#        uses: actions/download-artifact@v4
+#        id: download
+#        with:
+#          pattern: packages_*
+#          path: packages
+#          merge-multiple: true
+#
+#      - name: Determine channel
+#        id: channel
+#        uses: dkershner6/switch-case-action@v1
+#        with:
+#          default: "dev"
+#          conditionals-with-values: |
+#            ${{ startsWith(github.ref_name, 'v') }} => main
+#
+#      - name: Release
+#        uses: softprops/action-gh-release@v2
+#        with:
+#          prerelease: ${{ steps.channel.outputs.value != 'main' }}
+#          draft: true
+#          tag_name: ${{ github.ref_name }}
+#          fail_on_unmatched_files: true
+#          generate_release_notes: true
+#          files: ${{steps.download.outputs.download-path}}/*
