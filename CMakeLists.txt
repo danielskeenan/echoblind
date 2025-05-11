@@ -35,8 +35,15 @@ if (BUILD_EXEC)
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTOUIC ON)
     set(CMAKE_AUTORCC ON)
-    find_package(Qt6 COMPONENTS Core Widgets Xml REQUIRED)
+
+    # This is more portable across compilers compared to other methods
+    string(TOUPPER "${CMAKE_SYSTEM_NAME}" PLATFORM_NAME)
+    set(PLATFORM_NAME "PLATFORM_${PLATFORM_NAME}")
+    add_compile_definitions("${PLATFORM_NAME}")
+
+    find_package(Qt6 COMPONENTS Core Svg Widgets Xml REQUIRED)
     add_compile_definitions(QT_NO_KEYWORDS)
+    qt_standard_project_setup()
     add_subdirectory(src)
 
     include(CTest)
