@@ -41,7 +41,7 @@ namespace echoblind
             QPushButton* saveCfgButton = nullptr;
         };
         Widgets widgets_;
-        echoconfig::Config* config_ = nullptr;
+        std::unique_ptr<echoconfig::Config> config_;
 
         void initUi();
         void updateAllowedActions();

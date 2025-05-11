@@ -132,24 +132,18 @@ namespace echoblind
     void MainWindow::baseCfgChanged(const QString& path)
     {
         QFileInfo fileInfo(path);
-        echoconfig::Config* newConfig = nullptr;
+        std::unique_ptr<echoconfig::Config> newConfig;
         try
         {
-            newConfig = echoconfig::Config::loadCfg(path, this);
+            newConfig = echoconfig::Config::loadCfg(path);
         }
         catch (const std::exception&)
         {
-            newConfig = nullptr;
+            newConfig.reset();
         }
 
         // Do we need to re-parse the spreadsheet?
         const bool reparseSheet = config_ != nullptr && config_->isSheetParsed() && newConfig != nullptr;
-
-        // Cleanup old config.
-        if (config_ != nullptr)
-        {
-            config_->deleteLater();
-        }
 
         // Update info.
         if (newConfig != nullptr)
@@ -165,7 +159,7 @@ namespace echoblind
             widgets_.outCfgPath->setNameFilters(kDefaultConfigFilters);
             QMessageBox::warning(this, tr("Invalid config"), tr("The config file could not be loaded or is invalid."));
         }
-        config_ = newConfig;
+        config_ = std::move(newConfig);
         if (reparseSheet)
         {
             inSheetChanged(widgets_.inSheetPath->path());

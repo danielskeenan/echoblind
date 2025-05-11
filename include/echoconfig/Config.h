@@ -31,7 +31,7 @@ namespace echoconfig
     {
         Q_OBJECT
     public:
-        using QObject::QObject;
+        explicit Config() : QObject(nullptr) {}
 
         /**
          * Load a config file of unknown type.
@@ -40,7 +40,7 @@ namespace echoconfig
          *
          * @return
          */
-        [[nodiscard]] static Config* loadCfg(const QString& path, QObject* parent = nullptr);
+        [[nodiscard]] static std::unique_ptr<Config> loadCfg(const QString& path);
 
         [[nodiscard]] virtual QString panelType() const = 0;
 
@@ -113,7 +113,7 @@ namespace echoconfig
         struct ConfigLoaderFactory
         {
             virtual ~ConfigLoaderFactory() = default;
-            virtual Config* operator()(const QString& path) const = 0;
+            virtual std::unique_ptr<Config> operator()(const QString& path) const = 0;
         };
     } // namespace detail
 
@@ -124,9 +124,9 @@ namespace echoconfig
     template <ConfigClass C>
     struct ConfigLoader : detail::ConfigLoaderFactory
     {
-        Config* operator()(const QString& path) const override
+        std::unique_ptr<Config> operator()(const QString& path) const override
         {
-            C* cfg = new C();
+            auto cfg = std::make_unique<C>();
             cfg->parseCfg(path);
             return cfg;
         }

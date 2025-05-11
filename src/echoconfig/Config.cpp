@@ -24,16 +24,15 @@ namespace echoconfig
 {
     static const auto kRePreset = QRegularExpression(R"(^Preset (\d+)$)");
 
-    Config* Config::loadCfg(const QString& path, QObject* parent)
+    std::unique_ptr<Config> Config::loadCfg(const QString& path)
     {
         // ADD CONFIG TYPES HERE!
-        const std::vector<detail::ConfigLoaderFactory*> loaders{
-            new ConfigLoader<EchoPcpConfig>{},
-            new ConfigLoader<EchoAcpConfig>{},
-        };
+        std::vector<std::unique_ptr<detail::ConfigLoaderFactory>> loaders;
+        loaders.emplace_back(std::make_unique<ConfigLoader<EchoPcpConfig>>());
+        loaders.emplace_back(std::make_unique<ConfigLoader<EchoAcpConfig>>());
 
-        Config* obj = nullptr;
-        for (const auto loader : loaders)
+        std::unique_ptr<Config> obj;
+        for (const auto& loader : loaders)
         {
             try
             {
@@ -44,11 +43,6 @@ namespace echoconfig
                 // Try the next one.
                 continue;
             }
-        }
-
-        if (obj != nullptr)
-        {
-            obj->setParent(parent);
         }
 
         return obj;
