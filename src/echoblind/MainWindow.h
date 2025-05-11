@@ -10,11 +10,10 @@
 #define MAINWINDOW_H
 
 #include <QLabel>
-#include <QLineEdit>
 #include <QMainWindow>
 #include <QPushButton>
-
 #include "FileSelectorWidget.h"
+#include "echoconfig/Config.h"
 
 namespace echoblind
 {
@@ -25,20 +24,34 @@ namespace echoblind
     public:
         explicit MainWindow(QWidget* parent = nullptr);
 
+    protected:
+        void closeEvent(QCloseEvent* event) override;
+
     private:
         struct Widgets
         {
             FileSelectorWidget* baseCfgPath = nullptr;
             QLabel* rackTypeLabel = nullptr;
             QLabel* rackNameLabel = nullptr;
-            FileSelectorWidget* sheetLine = nullptr;
-            FileSelectorWidget* outCfgLine = nullptr;
+            FileSelectorWidget* inSheetPath = nullptr;
+            FileSelectorWidget* outSheetPath = nullptr;
+            FileSelectorWidget* outCfgPath = nullptr;
             QPushButton* saveSheetButton = nullptr;
-            QPushButton* loadSheetButton = nullptr;
+            QPushButton* saveCfgButton = nullptr;
         };
         Widgets widgets_;
+        echoconfig::Config* config_ = nullptr;
 
         void initUi();
+        void updateAllowedActions();
+
+    private Q_SLOTS:
+        void baseCfgChanged(const QString& path);
+        void outSheetChanged(const QString& path);
+        void inSheetChanged(const QString& path);
+        void outCfgChanged(const QString& path);
+        void saveSheet();
+        void saveCfg();
     };
 
 } // namespace echoblind

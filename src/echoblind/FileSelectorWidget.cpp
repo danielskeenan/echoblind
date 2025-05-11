@@ -39,7 +39,18 @@ namespace echoblind
         QFileDialog dialog(this);
         dialog.setAcceptMode(acceptMode_);
         dialog.setFileMode(fileMode_);
-        dialog.setNameFilters(nameFilters_);
+
+        // Filters
+        if (!nameFilters_.empty())
+        {
+            dialog.setNameFilters(nameFilters_);
+        }
+        if (!mimeTypeFilters_.empty())
+        {
+            dialog.setMimeTypeFilters(mimeTypeFilters_);
+        }
+
+        // If we already have a path selected, use that.
         if (!path().isEmpty())
         {
             dialog.selectFile(path());
@@ -48,8 +59,9 @@ namespace echoblind
         {
             dialog.setDirectory(settings::getLastFileDialogPath());
         }
-        dialog.exec();
 
+        // Do the thing.
+        dialog.exec();
         if (dialog.result() == QDialog::Accepted)
         {
             const QFileInfo fileInfo(dialog.selectedFiles().at(0));

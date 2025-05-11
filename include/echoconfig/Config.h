@@ -40,7 +40,7 @@ namespace echoconfig
          *
          * @return
          */
-        [[nodiscard]] static Config* loadCfg(const QString& path);
+        [[nodiscard]] static Config* loadCfg(const QString& path, QObject* parent = nullptr);
 
         [[nodiscard]] virtual QString panelType() const = 0;
 
@@ -51,7 +51,7 @@ namespace echoconfig
          * @param path Path to config file.
          * @throws std::runtime_error if the config cannot be parsed.
          */
-        virtual void parseCfg(const QString& path) = 0;
+        virtual void parseCfg(const QString& path);
 
         /**
          * Parse a spreadsheet file.
@@ -91,9 +91,13 @@ namespace echoconfig
         [[nodiscard]] virtual const Preset& getPreset(unsigned int num) const = 0;
         [[nodiscard]] virtual Preset& getPreset(unsigned int num) = 0;
 
+        [[nodiscard]] bool isSheetParsed() const { return sheetParsed_; }
+
     private:
         static constexpr auto kSheetIxLevels = 0;
         static constexpr auto kSheetIxTimes = 1;
+
+        bool sheetParsed_ = false;
 
         void openSheetLevels(const QXlsx::Document* doc);
         void saveSheetLevels(QXlsx::Document* doc) const;

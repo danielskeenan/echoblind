@@ -19,6 +19,8 @@ namespace echoconfig
 {
     void EchoPcpConfig::parseCfg(const QString& path)
     {
+        Config::parseCfg(path);
+
         QFile f(path);
         if (!f.open(QIODevice::ReadOnly))
         {

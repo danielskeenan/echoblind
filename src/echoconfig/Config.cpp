@@ -24,7 +24,7 @@ namespace echoconfig
 {
     static const auto kRePreset = QRegularExpression(R"(^Preset (\d+)$)");
 
-    Config* Config::loadCfg(const QString& path)
+    Config* Config::loadCfg(const QString& path, QObject* parent)
     {
         // ADD CONFIG TYPES HERE!
         const std::vector<detail::ConfigLoaderFactory*> loaders{
@@ -32,11 +32,12 @@ namespace echoconfig
             new ConfigLoader<EchoAcpConfig>{},
         };
 
+        Config* obj = nullptr;
         for (const auto loader : loaders)
         {
             try
             {
-                return (*loader)(path);
+                obj = (*loader)(path);
             }
             catch (const std::exception&)
             {
@@ -45,8 +46,15 @@ namespace echoconfig
             }
         }
 
-        return nullptr;
+        if (obj != nullptr)
+        {
+            obj->setParent(parent);
+        }
+
+        return obj;
     }
+
+    void Config::parseCfg(const QString& path) { sheetParsed_ = false; }
 
     void Config::parseSheet(const QString& path)
     {
@@ -68,6 +76,8 @@ namespace echoconfig
             throw std::runtime_error("Missing \"Times\" sheet.");
         }
         openSheetTimes(&doc);
+
+        sheetParsed_ = true;
     }
 
     void Config::saveSheet(const QString& path) const

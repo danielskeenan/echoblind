@@ -26,7 +26,6 @@ namespace echoblind
         Q_PROPERTY(QString path READ path WRITE setPath NOTIFY pathChanged USER true)
         Q_PROPERTY(QFileDialog::AcceptMode acceptMode READ acceptMode WRITE setAcceptMode)
         Q_PROPERTY(QFileDialog::FileMode fileMode READ fileMode WRITE setFileMode)
-        Q_PROPERTY(QStringList nameFilters READ nameFilters WRITE setNameFilters)
     public:
         explicit FileSelectorWidget(QWidget* parent = nullptr);
         [[nodiscard]] QString path() const;
@@ -36,7 +35,17 @@ namespace echoblind
         [[nodiscard]] QFileDialog::FileMode fileMode() const { return fileMode_; }
         void setFileMode(QFileDialog::FileMode fileMode) { fileMode_ = fileMode; }
         [[nodiscard]] const QStringList& nameFilters() const { return nameFilters_; }
-        void setNameFilters(const QStringList& nameFilters) { nameFilters_ = nameFilters; }
+        void setNameFilters(const QStringList& nameFilters)
+        {
+            nameFilters_ = nameFilters;
+            mimeTypeFilters_.clear();
+        }
+        [[nodiscard]] QStringList mimeTypeFilters() const { return mimeTypeFilters_; }
+        void setMimeTypeFilters(const QStringList& mimeTypeFilters)
+        {
+            mimeTypeFilters_ = mimeTypeFilters;
+            nameFilters_.clear();
+        }
 
     Q_SIGNALS:
         void pathChanged(QString path);
@@ -47,6 +56,7 @@ namespace echoblind
         QFileDialog::AcceptMode acceptMode_ = QFileDialog::AcceptOpen;
         QFileDialog::FileMode fileMode_ = QFileDialog::ExistingFile;
         QStringList nameFilters_;
+        QStringList mimeTypeFilters_;
 
     private Q_SLOTS:
         void browse();
