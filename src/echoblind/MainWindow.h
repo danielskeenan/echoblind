@@ -28,7 +28,7 @@ namespace echoblind
         void closeEvent(QCloseEvent* event) override;
 
     private:
-        inline static QStringList kDefaultConfigFilters{tr("Echo PCP files (*.cfg)"), tr("Echo ACP files (*.eacp)")};
+        inline static QStringList kDefaultConfigFilters{tr("Echo config files (*.cfg *.eacp)")};
         struct Widgets
         {
             FileSelectorWidget* baseCfgPath = nullptr;

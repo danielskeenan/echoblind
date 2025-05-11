@@ -143,7 +143,8 @@ namespace echoblind
         }
 
         // Do we need to re-parse the spreadsheet?
-        const bool reparseSheet = config_ != nullptr && config_->isSheetParsed() && newConfig != nullptr;
+        const bool reparseSheet = config_ != nullptr && config_->isSheetParsed() && newConfig != nullptr &&
+            !widgets_.inSheetPath->path().isEmpty();
 
         // Update info.
         if (newConfig != nullptr)
@@ -167,7 +168,10 @@ namespace echoblind
         updateAllowedActions();
     }
 
-    void MainWindow::outSheetChanged(const QString& path) { updateAllowedActions(); }
+    void MainWindow::outSheetChanged(const QString& path)
+    {
+        updateAllowedActions();
+    }
 
     void MainWindow::inSheetChanged(const QString& path)
     {
