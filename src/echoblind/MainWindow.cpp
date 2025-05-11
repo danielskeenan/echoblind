@@ -7,6 +7,7 @@
  */
 
 #include "MainWindow.h"
+#include <QDesktopServices>
 #include <QHBoxLayout>
 #include <QMessageBox>
 #include <QTabWidget>
@@ -36,7 +37,7 @@ namespace echoblind
         widgets_.baseCfgPath = new FileSelectorWidget(central);
         widgets_.baseCfgPath->setAcceptMode(QFileDialog::AcceptOpen);
         widgets_.baseCfgPath->setFileMode(QFileDialog::FileMode::ExistingFile);
-        widgets_.baseCfgPath->setNameFilters({tr("Echo PCP files (*.cfg)"), tr("Echo ACP files (*.eacp)")});
+        widgets_.baseCfgPath->setNameFilters(kDefaultConfigFilters);
         connect(widgets_.baseCfgPath, &FileSelectorWidget::pathChanged, this, &MainWindow::baseCfgChanged);
         layout->addWidget(widgets_.baseCfgPath);
 
@@ -130,6 +131,7 @@ namespace echoblind
 
     void MainWindow::baseCfgChanged(const QString& path)
     {
+        QFileInfo fileInfo(path);
         echoconfig::Config* newConfig = nullptr;
         try
         {
@@ -139,22 +141,35 @@ namespace echoblind
         {
             newConfig = nullptr;
         }
+
+        // Do we need to re-parse the spreadsheet?
+        const bool reparseSheet = config_ != nullptr && config_->isSheetParsed() && newConfig != nullptr;
+
+        // Cleanup old config.
         if (config_ != nullptr)
         {
             config_->deleteLater();
         }
+
+        // Update info.
         if (newConfig != nullptr)
         {
             widgets_.rackTypeLabel->setText(tr("Type: %1").arg(newConfig->panelType()));
             widgets_.rackNameLabel->setText(tr("Name: %1").arg(newConfig->panelName()));
+            widgets_.outCfgPath->setNameFilters({tr("%1 files (*.%1)").arg(fileInfo.suffix())});
         }
         else
         {
             widgets_.rackTypeLabel->clear();
             widgets_.rackNameLabel->clear();
+            widgets_.outCfgPath->setNameFilters(kDefaultConfigFilters);
             QMessageBox::warning(this, tr("Invalid config"), tr("The config file could not be loaded or is invalid."));
         }
         config_ = newConfig;
+        if (reparseSheet)
+        {
+            inSheetChanged(widgets_.inSheetPath->path());
+        }
         updateAllowedActions();
     }
 
@@ -186,6 +201,14 @@ namespace echoblind
         try
         {
             config_->saveSheet(widgets_.outSheetPath->path());
+            QMessageBox msgBox(QMessageBox::Information, tr("Sheet saved"),
+                               tr("The sheet has been saved. Do you want to open it?"),
+                               QMessageBox::Yes | QMessageBox::No, this);
+            const auto ret = msgBox.exec();
+            if (ret == QMessageBox::Yes)
+            {
+                QDesktopServices::openUrl(QUrl::fromLocalFile(widgets_.outSheetPath->path()));
+            }
         }
         catch (const std::exception&)
         {
@@ -205,6 +228,15 @@ namespace echoblind
         try
         {
             config_->saveCfg(widgets_.baseCfgPath->path(), widgets_.outCfgPath->path());
+            QMessageBox msgBox(QMessageBox::Information, tr("Config saved"),
+                               tr("The config has been saved. Do you want to open the folder it was saved in?"),
+                               QMessageBox::Yes | QMessageBox::No, this);
+            const auto ret = msgBox.exec();
+            if (ret == QMessageBox::Yes)
+            {
+                QFileInfo path(widgets_.outCfgPath->path());
+                QDesktopServices::openUrl(QUrl::fromLocalFile(path.dir().absolutePath()));
+            }
         }
         catch (const std::exception&)
         {

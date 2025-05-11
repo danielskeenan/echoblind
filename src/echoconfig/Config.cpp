@@ -58,6 +58,8 @@ namespace echoconfig
 
     void Config::parseSheet(const QString& path)
     {
+        sheetParsed_ = false;
+
         QFile f(path);
         if (!f.open(QIODevice::ReadOnly))
         {
