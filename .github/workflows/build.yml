@@ -29,8 +29,6 @@ jobs:
           - Release
     env:
       CMAKE_GENERATOR: ${{ matrix.system.generator }}
-      # See https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
-      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
     steps:
       - name: Get number of CPU cores
