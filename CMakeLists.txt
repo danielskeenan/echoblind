@@ -5,6 +5,7 @@ project(echoblind
         DESCRIPTION "Edit Echo panel information offline."
         VERSION 0.1.0
         LANGUAGES CXX
+        HOMEPAGE_URL "https://github.com/danielskeenan/echoblind"
 )
 set(PROJECT_DISPLAY_NAME "Echo Blind")
 set(PROJECT_AUTHOR "Dan Keenan")
@@ -53,7 +54,7 @@ if (BUILD_EXEC)
 
     option(BUILD_PACKAGE "Build packages/installers usable on this platform." OFF)
     if (BUILD_PACKAGE)
-        #        add_subdirectory(install)
+        add_subdirectory(install)
     endif ()
 endif ()
 
