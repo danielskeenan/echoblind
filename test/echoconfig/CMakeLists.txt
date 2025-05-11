@@ -1,4 +1,5 @@
 add_executable(echoconfig_test
+        EchoAcpConfigTest.cpp
         EchoPcpConfigTest.cpp
 )
 

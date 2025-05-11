@@ -17,7 +17,10 @@ namespace echoconfig
 {
     class EchoPcpConfig : public Config
     {
+        Q_OBJECT
     public:
+        using Config::Config;
+
         [[nodiscard]] QString panelType() const override { return tr("Echo PCP v3.1.X"); }
         [[nodiscard]] QString panelName() const override { return name_; }
 
@@ -48,9 +51,15 @@ namespace echoconfig
         [[nodiscard]] Preset& getPreset(unsigned int num) override { return presets_[num]; }
 
     protected:
+        [[nodiscard]] virtual QString rootTagName() const { return QStringLiteral("SMARTSWITCH2"); }
+        [[nodiscard]] virtual QString rackTagName() const { return QStringLiteral("CABINET"); }
         [[nodiscard]] virtual QString outputTagName() const { return QStringLiteral("RELAY"); }
         [[nodiscard]] virtual QString outputAttrName() const { return QStringLiteral("RELAY"); }
         [[nodiscard]] virtual QString fadeTimeAttrName() const { return QStringLiteral("UPTIME"); }
+        [[nodiscard]] virtual bool isVersionCompatible(QStringView version) const
+        {
+            return version == QStringLiteral("3.1.X");
+        }
 
     private:
         // using RackSpaceMap = boost::bimap<unsigned int, unsigned int>;

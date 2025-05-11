@@ -1,4 +1,6 @@
 add_library(echoconfig STATIC
+        ${PROJECT_SOURCE_DIR}/include/echoconfig/EchoAcpConfig.h
+        EchoAcpConfig.cpp
         ${PROJECT_SOURCE_DIR}/include/echoconfig/EchoPcpConfig.h
         EchoPcpConfig.cpp
         ${PROJECT_SOURCE_DIR}/include/echoconfig/Circuit.h

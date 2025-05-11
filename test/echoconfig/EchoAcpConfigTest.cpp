@@ -1,5 +1,5 @@
 /**
- * @file EchoPcpConfigTest.cpp
+ * @file EchoAcpConfigTest.cpp
  *
  * @author Dan Keenan
  * @date 5/10/2025
@@ -11,7 +11,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <ranges>
 #include "XlsxMatcher.h"
-#include "echoconfig/EchoPcpConfig.h"
+#include "echoconfig/EchoAcpConfig.h"
 #include "genLevelsMap.h"
 #include "qstring_tostring.h"
 
@@ -119,12 +119,12 @@ static const std::vector<Preset> kExpectedPresets = []()
     };
 }();
 
-TEST_CASE("Echo PCP Config")
+TEST_CASE("Echo ACP Config")
 {
-    EchoPcpConfig config;
+    EchoAcpConfig config;
     SECTION("Parse Cfg")
     {
-        REQUIRE_NOTHROW(config.parseCfg(RESOURCES_PATH "/EchoPcpConfigTest/ERP.cfg"));
+        REQUIRE_NOTHROW(config.parseCfg(RESOURCES_PATH "/EchoAcpConfigTest/EACP.eacp"));
 
         // Circuits.
         std::vector<Circuit> actualCircuits;
@@ -145,12 +145,12 @@ TEST_CASE("Echo PCP Config")
 
     SECTION("Write Sheet")
     {
-        REQUIRE_NOTHROW(config.parseCfg(RESOURCES_PATH "/EchoPcpConfigTest/ERP.cfg"));
+        REQUIRE_NOTHROW(config.parseCfg(RESOURCES_PATH "/EchoAcpConfigTest/EACP.eacp"));
 
         QTemporaryDir testDir;
-        const auto xlsxFilePath = testDir.filePath("erp.xlsx");
+        const auto xlsxFilePath = testDir.filePath("EACP.xlsx");
         REQUIRE_NOTHROW(config.saveSheet(xlsxFilePath));
-        QXlsx::Document expected(RESOURCES_PATH "/EchoPcpConfigTest/ERP.xlsx");
+        QXlsx::Document expected(RESOURCES_PATH "/EchoAcpConfigTest/EACP.xlsx");
         QXlsx::Document actual(xlsxFilePath);
 
         CHECK_THAT(expected, MatchesXlsx(actual));
@@ -158,7 +158,7 @@ TEST_CASE("Echo PCP Config")
 
     SECTION("Read Sheet")
     {
-        REQUIRE_NOTHROW(config.parseSheet(RESOURCES_PATH "/EchoPcpConfigTest/ERP_changed.xlsx"));
+        REQUIRE_NOTHROW(config.parseSheet(RESOURCES_PATH "/EchoAcpConfigTest/EACP_changed.xlsx"));
 
         // Circuits.
         const auto expectedCircuits = []()
@@ -208,14 +208,14 @@ TEST_CASE("Echo PCP Config")
 
     SECTION("Write Cfg")
     {
-        REQUIRE_NOTHROW(config.parseSheet(RESOURCES_PATH "/EchoPcpConfigTest/ERP_changed.xlsx"));
+        REQUIRE_NOTHROW(config.parseSheet(RESOURCES_PATH "/EchoAcpConfigTest/EACP_changed.xlsx"));
 
         QTemporaryDir testDir;
-        const auto cfgFilePath = testDir.filePath("erp_changed.cfg");
-        REQUIRE_NOTHROW(config.saveCfg(RESOURCES_PATH "/EchoPcpConfigTest/ERP.cfg", cfgFilePath));
+        const auto cfgFilePath = testDir.filePath("EACP_changed.eacp");
+        REQUIRE_NOTHROW(config.saveCfg(RESOURCES_PATH "/EchoAcpConfigTest/EACP.eacp", cfgFilePath));
 
         // Parsing the expected and actual are the best way to account for minor differences in formatting.
-        QFile fExpected(RESOURCES_PATH "/EchoPcpConfigTest/ERP_changed.cfg");
+        QFile fExpected(RESOURCES_PATH "/EchoAcpConfigTest/EACP_changed.eacp");
         REQUIRE(fExpected.open(QIODevice::ReadOnly));
         QDomDocument xmlExpected;
         xmlExpected.setContent(&fExpected);

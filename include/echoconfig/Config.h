@@ -23,6 +23,7 @@ namespace QXlsx
 
 namespace echoconfig
 {
+
     /**
      * Base class for panel configurations.
      */
@@ -103,14 +104,23 @@ namespace echoconfig
     template <class C>
     concept ConfigClass = std::derived_from<C, Config>;
 
+    namespace detail
+    {
+        struct ConfigLoaderFactory
+        {
+            virtual ~ConfigLoaderFactory() = default;
+            virtual Config* operator()(const QString& path) const = 0;
+        };
+    } // namespace detail
+
     /**
      * Generic class to simplify specifying config loaders.
      * @tparam C A derivative of echoconfig::Config.
      */
     template <ConfigClass C>
-    struct ConfigLoader
+    struct ConfigLoader : detail::ConfigLoaderFactory
     {
-        Config* operator()(const QString& path) const
+        Config* operator()(const QString& path) const override
         {
             C* cfg = new C();
             cfg->parseCfg(path);

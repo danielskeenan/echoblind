@@ -16,6 +16,7 @@
 #include <xlsxdocument.h>
 #include <xlsxworkbook.h>
 
+#include "echoconfig/EchoAcpConfig.h"
 #include "echoconfig/EchoPcpConfig.h"
 #include "echoconfig/sheet_helpers.h"
 
@@ -26,15 +27,16 @@ namespace echoconfig
     Config* Config::loadCfg(const QString& path)
     {
         // ADD CONFIG TYPES HERE!
-        const auto loaders = {
-            ConfigLoader<EchoPcpConfig>(),
+        const std::vector<detail::ConfigLoaderFactory*> loaders{
+            new ConfigLoader<EchoPcpConfig>{},
+            new ConfigLoader<EchoAcpConfig>{},
         };
 
-        for (const auto& loader : loaders)
+        for (const auto loader : loaders)
         {
             try
             {
-                return loader(path);
+                return (*loader)(path);
             }
             catch (const std::exception&)
             {

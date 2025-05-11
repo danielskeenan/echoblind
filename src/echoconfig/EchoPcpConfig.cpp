@@ -34,7 +34,7 @@ namespace echoconfig
             if (tokenType == QXmlStreamReader::StartElement)
             {
                 const auto tagName = xml.name();
-                if (!parsedRoot && tagName != QStringLiteral("SMARTSWITCH2"))
+                if (!parsedRoot && tagName != rootTagName())
                 {
                     throw std::runtime_error("Incorrect root tag.");
                 }
@@ -43,12 +43,13 @@ namespace echoconfig
                     parsedRoot = true;
                 }
 
-                if (tagName == QStringLiteral("CABINET"))
+                if (tagName == rackTagName())
                 {
-                    if (xml.attributes().value(QStringLiteral("VERSION")) != QStringLiteral("3.1.X"))
+                    if (!isVersionCompatible(xml.attributes().value(QStringLiteral("VERSION"))))
                     {
                         throw std::runtime_error("Incorrect version.");
                     }
+                    name_ = xml.attributes().value(QStringLiteral("NAME")).toString();
                 }
                 else if (tagName == outputTagName())
                 {
@@ -189,7 +190,7 @@ namespace echoconfig
                 const auto tagName = xmlIn.name();
                 // Mutable attributes.
                 auto attrs = xmlIn.attributes();
-                if (!parsedRoot && tagName != QStringLiteral("SMARTSWITCH2"))
+                if (!parsedRoot && tagName != rootTagName())
                 {
                     throw std::runtime_error("Incorrect root tag.");
                 }
@@ -198,9 +199,9 @@ namespace echoconfig
                     parsedRoot = true;
                 }
 
-                if (tagName == QStringLiteral("CABINET"))
+                if (tagName == rackTagName())
                 {
-                    if (xmlIn.attributes().value(QStringLiteral("VERSION")) != QStringLiteral("3.1.X"))
+                    if (!isVersionCompatible(xmlIn.attributes().value(QStringLiteral("VERSION"))))
                     {
                         throw std::runtime_error("Incorrect version.");
                     }
