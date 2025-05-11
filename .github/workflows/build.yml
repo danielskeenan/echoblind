@@ -36,7 +36,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ github.workspace }}/.vcpkg_cache
-          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json') }}
+          key: vcpkg-${{runner.os}}_${{runner.arch}}-${{ hashFiles('vcpkg.json') }}
           restore-keys: vcpkg-${{runner.os}}_${{runner.arch}}-
 
       - name: Get number of CPU cores
