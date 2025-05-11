@@ -29,8 +29,16 @@ jobs:
           - Release
     env:
       CMAKE_GENERATOR: ${{ matrix.system.generator }}
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.vcpkg_cache,readwrite
 
     steps:
+      - name: Restore vcpkg cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.vcpkg_cache
+          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-${{ matrix.system.os }}-
+
       - name: Get number of CPU cores
         uses: SimenB/github-actions-cpu-cores@v2
         id: cpu-cores
@@ -88,6 +96,12 @@ jobs:
 
       - name: Build
         run: cmake --build "${BUILD_DIR}" --config ${{ matrix.build_type }}
+
+      - name: Save vcpkg cache
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.vcpkg_cache
+          key: vcpkg-${{ matrix.system.os }}-${{ hashFiles('vcpkg.json') }}
 
       #######################
       # TEST
