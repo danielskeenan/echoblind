@@ -56,10 +56,7 @@ namespace echoconfig
         [[nodiscard]] virtual QString outputTagName() const { return QStringLiteral("RELAY"); }
         [[nodiscard]] virtual QString outputAttrName() const { return QStringLiteral("RELAY"); }
         [[nodiscard]] virtual QString fadeTimeAttrName() const { return QStringLiteral("UPTIME"); }
-        [[nodiscard]] virtual bool isVersionCompatible(QStringView version) const
-        {
-            return version == QStringLiteral("3.1.X");
-        }
+        [[nodiscard]] virtual bool isVersionCompatible(QStringView versionStr) const;
 
     private:
         // using RackSpaceMap = boost::bimap<unsigned int, unsigned int>;

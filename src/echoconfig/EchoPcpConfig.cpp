@@ -10,9 +10,9 @@
 
 #include <QFile>
 #include <QSaveFile>
+#include <QVersionNumber>
 #include <QXmlStreamReader>
 #include <ranges>
-
 #include "echoconfig/xml_helpers.h"
 
 namespace echoconfig
@@ -396,4 +396,14 @@ namespace echoconfig
         std::advance(it, ix);
         return it->second;
     }
+
+    bool EchoPcpConfig::isVersionCompatible(QStringView versionStr) const {
+        const auto version = QVersionNumber::fromString(versionStr);
+        if (version.isNull() || !QVersionNumber(3, 1).isPrefixOf(version))
+        {
+            return false;
+        }
+        return true;
+    }
+
 } // namespace echoconfig
