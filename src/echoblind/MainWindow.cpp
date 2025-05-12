@@ -131,15 +131,17 @@ namespace echoblind
 
     void MainWindow::baseCfgChanged(const QString& path)
     {
-        QFileInfo fileInfo(path);
         std::unique_ptr<echoconfig::Config> newConfig;
-        try
+        if (!path.isEmpty())
         {
-            newConfig = echoconfig::Config::loadCfg(path);
-        }
-        catch (const std::exception&)
-        {
-            newConfig.reset();
+            try
+            {
+                newConfig = echoconfig::Config::loadCfg(path);
+            }
+            catch (const std::exception&)
+            {
+                newConfig.reset();
+            }
         }
 
         // Do we need to re-parse the spreadsheet?
@@ -151,6 +153,7 @@ namespace echoblind
         {
             widgets_.rackTypeLabel->setText(tr("Type: %1").arg(newConfig->panelType()));
             widgets_.rackNameLabel->setText(tr("Name: %1").arg(newConfig->panelName()));
+            QFileInfo fileInfo(path);
             widgets_.outCfgPath->setNameFilters({tr("%1 files (*.%1)").arg(fileInfo.suffix())});
         }
         else
@@ -158,7 +161,12 @@ namespace echoblind
             widgets_.rackTypeLabel->clear();
             widgets_.rackNameLabel->clear();
             widgets_.outCfgPath->setNameFilters(kDefaultConfigFilters);
-            QMessageBox::warning(this, tr("Invalid config"), tr("The config file could not be loaded or is invalid."));
+            // Don't complain about an empty path.
+            if (!path.isEmpty())
+            {
+                QMessageBox::warning(this, tr("Invalid config"),
+                                     tr("The config file could not be loaded or is invalid."));
+            }
         }
         config_ = std::move(newConfig);
         if (reparseSheet)
@@ -168,20 +176,20 @@ namespace echoblind
         updateAllowedActions();
     }
 
-    void MainWindow::outSheetChanged(const QString& path)
-    {
-        updateAllowedActions();
-    }
+    void MainWindow::outSheetChanged(const QString& path) { updateAllowedActions(); }
 
     void MainWindow::inSheetChanged(const QString& path)
     {
-        try
+        if (!path.isEmpty())
         {
-            config_->parseSheet(path);
-        }
-        catch (const std::exception&)
-        {
-            QMessageBox::warning(this, tr("Invalid sheet"), tr("The sheet could not be loaded or is invalid."));
+            try
+            {
+                config_->parseSheet(path);
+            }
+            catch (const std::exception&)
+            {
+                QMessageBox::warning(this, tr("Invalid sheet"), tr("The sheet could not be loaded or is invalid."));
+            }
         }
         updateAllowedActions();
     }
